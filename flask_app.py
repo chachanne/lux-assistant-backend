@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, Response
 import requests
-import os
+import os # Importez os pour accéder aux variables d'environnement
 import io
 from flask_cors import CORS
 import google.generativeai as genai
@@ -12,25 +12,33 @@ CORS(app) # Active CORS pour toutes les routes
 LUXASR_API_URL = "https://luxasr.uni.lu/v2/asr"
 
 # Configuration de Gemini API Key:
-# Pour les tests LOCAUX, utilisez votre clé directement ici.
-# N'oubliez PAS DE LA REMPLACER OU DE LA PROTÉGER SI VOUS LA PARTAGEZ !
-genai.configure(api_key="AIzaSyCd-8A3hdFX4dIgfGaHlDNI_CV1BqyhnO4") # <-- REMPLACEZ CECI PAR VOTRE VRAIE CLÉ !
-# Ajoutez ceci temporairement pour vérifier les modèles disponibles
-@app.route('/list_gemini_models')
-def list_gemini_models():
-    try:
-        models = genai.list_models()
-        model_list = []
-        for m in models:
-            model_info = {
-                "name": m.name,
-                "display_name": m.display_name,
-                "supported_generation_methods": m.supported_generation_methods
-            }
-            model_list.append(model_info)
-        return jsonify(model_list)
-    except Exception as e:
-        return jsonify({"error": f"Failed to list models: {e}"}), 500
+# LA CLÉ EST MAINTENANT RÉCUPÉRÉE DEPUIS LES VARIABLES D'ENVIRONNEMENT.
+# NE JAMAIS CODER LA CLÉ EN DUR DANS LE FICHIER POUR LA PRODUCTION OU UN DÉPÔT PUBLIC !
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") # Récupère la variable d'environnement nommée GEMINI_API_KEY
+
+# Vérification si la clé est présente (très important pour le débogage)
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY n'est pas définie dans les variables d'environnement. Veuillez la configurer.")
+
+genai.configure(api_key=GEMINI_API_KEY) # Utilise la clé récupérée de l'environnement
+
+# Le code pour lister les modèles n'est plus nécessaire après vérification, mais je le laisse commenté
+# @app.route('/list_gemini_models')
+# def list_gemini_models():
+#     try:
+#         models = genai.list_models()
+#         model_list = []
+#         for m in models:
+#             model_info = {
+#                 "name": m.name,
+#                 "display_name": m.display_name,
+#                 "supported_generation_methods": m.supported_generation_methods
+#             }
+#             model_list.append(model_info)
+#         return jsonify(model_list)
+#     except Exception as e:
+#         return jsonify({"error": f"Failed to list models: {e}"}), 500
+
 # Fonction pour appeler l'API LuxASR
 def call_luxasr_api(audio_data, filename="audio.wav", content_type="audio/wav"):
     headers = {
@@ -61,8 +69,7 @@ def call_gemini_api(prompt_text):
             f"Réponds à cette question en allemand, en t'adressant à un jeune adolescent, et sois concis. "
             f"Ensuite, traduis cette réponse en luxembourgeois. "
             f"Présente la réponse comme suit : [Votre réponse en luxembourgeois]"
-
-)
+        )
         return response.text
     except Exception as e:
         print(f"Erreur lors de l'appel à l'API Gemini : {e}")
